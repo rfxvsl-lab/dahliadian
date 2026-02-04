@@ -386,19 +386,30 @@ const DEFAULT_CONTENT = {
 };
 
 export default function App() {
-  const [content, setContent] = useState(DEFAULT_CONTENT);
+  // 🔄 Load initial data dari localStorage (untuk cache/fast load)
+  const getInitialContent = () => {
+    try {
+      const cached = localStorage.getItem('portfolio_content');
+      return cached ? JSON.parse(cached) : DEFAULT_CONTENT;
+    } catch {
+      return DEFAULT_CONTENT;
+    }
+  };
+
+  const [content, setContent] = useState(getInitialContent());
   const [activeTab, setActiveTab] = useState("HOME");
   const [isEditing, setIsEditing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   
   // States
-  const [editForm, setEditForm] = useState(DEFAULT_CONTENT);
+  const [editForm, setEditForm] = useState(getInitialContent());
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [password, setPassword] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(true);
 
   // Transition Logic
   const handlePageChange = (pageId) => {
@@ -414,6 +425,7 @@ export default function App() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        setIsLoadingFromCloud(true);
         const { data, error } = await supabase
           .from('portfolio_content')
           .select('data')
@@ -422,17 +434,21 @@ export default function App() {
         
         if (error) {
           console.warn('⚠️ Supabase load error:', error.message);
-          return; // Gunakan DEFAULT_CONTENT
+          setIsLoadingFromCloud(false);
+          return; // Tetap gunakan cache dari localStorage
         }
 
         if (data && data.data && Object.keys(data.data).length > 0) {
           setContent(data.data);
           setEditForm(data.data);
+          // 💾 Save to localStorage untuk fast load berikutnya (no flicker!)
+          localStorage.setItem('portfolio_content', JSON.stringify(data.data));
           console.log('✅ Data loaded from Supabase');
         }
       } catch (err) {
         console.warn('⚠️ Load error:', err);
-        // Tetap gunakan DEFAULT_CONTENT jika error
+      } finally {
+        setIsLoadingFromCloud(false);
       }
     };
 
@@ -470,7 +486,10 @@ export default function App() {
 
   const handleSave = async () => {
     try {
-      // 💾 Save to Supabase
+      // 💾 Save to localStorage immediately (instant visual feedback)
+      localStorage.setItem('portfolio_content', JSON.stringify(editForm));
+      
+      // 💾 Save to Supabase (background sync)
       const { error } = await supabase
         .from('portfolio_content')
         .update({ data: editForm, updated_at: new Date() })
