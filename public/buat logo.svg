@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Background Circle (Modern Tech Gradient) -->
+<defs>
+<linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" style="stop-color:#6366f1" />
+<stop offset="100%" style="stop-color:#a855f7" />
+</linearGradient>
+<linearGradient id="hijabGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+<stop offset="0%" style="stop-color:#ffffff" />
+<stop offset="100%" style="stop-color:#f1f5f9" />
+</linearGradient>
+</defs>
+
+<circle cx="256" cy="256" r="240" fill="url(#bgGradient)" />
+
+<!-- Simplified Hijab Shape (Outer) -->
+
+<path d="M256 80C170 80 120 150 120 250C120 380 180 440 256 440C332 440 392 380 392 250C392 150 342 80 256 80Z" fill="url(#hijabGradient)" />
+
+<!-- Face Opening (Negative Space/Inner Hijab) -->
+
+<path d="M256 130C210 130 180 175 180 235C180 300 215 330 256 330C297 330 332 300 332 235C332 175 302 130 256 130Z" fill="#fee2e2" />
+
+<!-- Facial Features (Minimalist) -->
+
+<path d="M230 240C230 240 235 235 245 235" stroke="#475569" stroke-width="4" stroke-linecap="round" />
+<path d="M267 240C267 240 272 235 282 235" stroke="#475569" stroke-width="4" stroke-linecap="round" />
+
+<!-- Modern Geometric Accent (Browser Symbolism) -->
+
+<path d="M256 360Q256 380 276 380H316" stroke="#6366f1" stroke-width="8" stroke-linecap="round" opacity="0.6" />
+
+<!-- Shine/Glass Effect -->
+
+<path d="M140 200C160 140 210 100 256 100" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.3" />
+</svg>

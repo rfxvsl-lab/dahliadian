@@ -5,6 +5,7 @@ import {
   Layout, Maximize2, Minimize2, Menu, Facebook, Twitter, Instagram, 
   Linkedin, Mail, Phone, Video, Move, CheckCircle, Shapes, Sparkles 
 } from 'lucide-react';
+import { supabase } from './lib/supabaseClient';
 
 // --- DAFTAR 30 FONT GOOGLE ---
 const FONT_OPTIONS = [
@@ -409,6 +410,35 @@ export default function App() {
     }, 300); // Wait for exit animation if we implemented one, or just instant switch with enter animation
   };
 
+  // 🔄 Load data from Supabase on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('portfolio_content')
+          .select('data')
+          .eq('id', 1)
+          .single();
+        
+        if (error) {
+          console.warn('⚠️ Supabase load error:', error.message);
+          return; // Gunakan DEFAULT_CONTENT
+        }
+
+        if (data && data.data && Object.keys(data.data).length > 0) {
+          setContent(data.data);
+          setEditForm(data.data);
+          console.log('✅ Data loaded from Supabase');
+        }
+      } catch (err) {
+        console.warn('⚠️ Load error:', err);
+        // Tetap gunakan DEFAULT_CONTENT jika error
+      }
+    };
+
+    loadData();
+  }, []);
+
   // --- ACTIONS ---
   const data = isEditing ? editForm : content;
 
@@ -438,11 +468,29 @@ export default function App() {
     }));
   };
 
-  const handleSave = () => {
-    setContent(editForm);
-    setIsEditing(false);
-    setShowSaveModal(true);
-    setTimeout(() => setShowSaveModal(false), 2000);
+  const handleSave = async () => {
+    try {
+      // 💾 Save to Supabase
+      const { error } = await supabase
+        .from('portfolio_content')
+        .update({ data: editForm, updated_at: new Date() })
+        .eq('id', 1);
+      
+      if (error) {
+        console.error('❌ Save error:', error);
+        alert('⚠️ Gagal menyimpan ke Supabase: ' + error.message);
+        return;
+      }
+
+      setContent(editForm);
+      setIsEditing(false);
+      setShowSaveModal(true);
+      setTimeout(() => setShowSaveModal(false), 2000);
+      console.log('✅ Data saved to Supabase successfully');
+    } catch (err) {
+      console.error('❌ Unexpected error:', err);
+      alert('⚠️ Error: ' + err.message);
+    }
   };
 
   // Decoration Logic
