@@ -155,7 +155,7 @@ const InlineMedia = ({ isEditing, src, onUpload, className, containerClassName }
   };
 
   return (
-    <div className={`relative group ${containerClassName}`}>
+    <div className={`relative group flex items-center justify-center ${containerClassName}`}>
       {src ? (
         isVideo ? (
            <video src={src} className={className} controls autoPlay muted loop />
@@ -163,8 +163,8 @@ const InlineMedia = ({ isEditing, src, onUpload, className, containerClassName }
            <img src={src} alt="Content" className={className} />
         )
       ) : (
-        <div className={`flex items-center justify-center bg-gray-100 text-gray-400 ${className}`}>
-           <ImageIcon size={24} />
+        <div className={`flex items-center justify-center bg-gray-100 text-gray-400 w-full h-full min-h-[150px] ${className}`}>
+           <ImageIcon size={32} className="opacity-50" />
         </div>
       )}
       
@@ -182,29 +182,35 @@ const InlineMedia = ({ isEditing, src, onUpload, className, containerClassName }
   );
 };
 
-// Section Wrapper
+// Section Wrapper - DIKOREKSI (Root Cause Fixed)
 const SectionWrapper = ({ isEditing, children, onMoveUp, onMoveDown, onDelete, label, animation, onAnimationChange }) => {
-  if (!isEditing) return <div className={`relative ${animation || ''}`}>{children}</div>;
-  
+  // Menggunakan wrapper tunggal agar layout shell tetap identik antara mode View dan Edit
   return (
-    <div className="section-wrapper relative border border-dashed border-gray-300 hover:border-accent rounded-xl transition-all mb-8 p-2 group">
-      <div className="section-controls absolute -top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-white shadow-xl border border-gray-100 rounded-full p-1.5 px-3 transform scale-95 hover:scale-100 transition-transform">
-        <span className="text-[10px] font-bold text-accent mr-2 px-2 uppercase tracking-wider">{label}</span>
-        
-        <select 
-          value={animation || ""} 
-          onChange={(e) => onAnimationChange(e.target.value)}
-          className="text-[10px] border rounded bg-gray-50 mr-2 max-w-[80px]"
-        >
-          {ANIMATION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-        </select>
+    <div className={`
+      relative transition-all duration-300 w-full group
+      ${isEditing ? 'border-2 border-dashed border-gray-300 hover:border-accent rounded-xl p-4 mb-12' : 'mb-24'} 
+      ${animation || ''}
+    `}>
+      {isEditing && (
+        <div className="section-controls absolute -top-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-white shadow-xl border border-gray-100 rounded-full p-1.5 px-3 transform scale-95 hover:scale-100 transition-transform">
+          <span className="text-[10px] font-bold text-accent mr-2 px-2 uppercase tracking-wider">{label}</span>
+          
+          <select 
+            value={animation || ""} 
+            onChange={(e) => onAnimationChange(e.target.value)}
+            className="text-[10px] border rounded bg-gray-50 mr-2 max-w-[80px]"
+          >
+            {ANIMATION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
 
-        <button onClick={onMoveUp} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600"><ArrowUp size={12}/></button>
-        <button onClick={onMoveDown} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600"><ArrowDown size={12}/></button>
-        <div className="w-px h-3 bg-gray-300 mx-1"></div>
-        <button onClick={onDelete} className="p-1.5 hover:bg-red-50 rounded-full text-red-500"><Trash2 size={12}/></button>
-      </div>
-      <div className={animation || ''}>
+          <button onClick={onMoveUp} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600"><ArrowUp size={12}/></button>
+          <button onClick={onMoveDown} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600"><ArrowDown size={12}/></button>
+          <div className="w-px h-3 bg-gray-300 mx-1"></div>
+          <button onClick={onDelete} className="p-1.5 hover:bg-red-50 rounded-full text-red-500"><Trash2 size={12}/></button>
+        </div>
+      )}
+      {/* Container ini memastikan z-index tidak menutupi kontrol lain */}
+      <div className="relative z-10">
         {children}
       </div>
     </div>
@@ -497,6 +503,18 @@ export default function App() {
     }));
   };
 
+  const moveSection = (index, direction) => {
+    updateState(prev => {
+      const newSections = [...prev.sections];
+      if (direction === 'up' && index > 0) {
+        [newSections[index - 1], newSections[index]] = [newSections[index], newSections[index - 1]];
+      } else if (direction === 'down' && index < newSections.length - 1) {
+        [newSections[index + 1], newSections[index]] = [newSections[index], newSections[index + 1]];
+      }
+      return { ...prev, sections: newSections };
+    });
+  };
+
   const handleSave = async () => {
     try {
       // 💾 Save to localStorage immediately (instant visual feedback)
@@ -560,7 +578,7 @@ export default function App() {
   };
 
   // --- SECTION RENDERERS ---
-  const renderSection = (section) => {
+  const renderSection = (section, index) => {
     const { id, type, data: sData, animation } = section;
 
     // HERO SECTION
@@ -568,7 +586,8 @@ export default function App() {
       return (
         <SectionWrapper 
           key={id} isEditing={isEditing} label="Hero" animation={animation}
-          onMoveUp={() => {}} onMoveDown={() => {}} onDelete={() => {}} 
+          onMoveUp={() => moveSection(index, 'up')} onMoveDown={() => moveSection(index, 'down')} 
+          onDelete={() => updateState(p => ({...p, sections: p.sections.filter(s => s.id !== id)}))} 
           onAnimationChange={(v) => updateState(p => ({...p, sections: p.sections.map(s => s.id === id ? {...s, animation: v} : s)}))}
         >
           <div className="relative flex flex-col md:flex-row items-center justify-between min-h-[85vh] overflow-hidden pt-10">
@@ -590,7 +609,7 @@ export default function App() {
             <div className="w-full md:w-1/2 relative flex justify-center items-center mt-12 md:mt-0 z-10">
                <div className="relative w-[320px] h-[320px] md:w-[500px] md:h-[500px]">
                   <div className="absolute inset-0 rounded-full bg-accent opacity-20 blur-3xl animate-pulse"></div>
-                  <div className="absolute inset-4 rounded-full border-[20px] border-white/50 shadow-2xl overflow-hidden">
+                  <div className="absolute inset-4 rounded-full border-[20px] border-white/50 shadow-2xl overflow-hidden bg-gray-50">
                     <InlineMedia 
                       isEditing={isEditing} src={sData.image} 
                       onUpload={(b64) => updateSectionData(id, 'image', b64)}
@@ -609,7 +628,8 @@ export default function App() {
       return (
         <SectionWrapper 
           key={id} isEditing={isEditing} label="About" animation={animation}
-          onMoveUp={() => {}} onMoveDown={() => {}} onDelete={() => {}} 
+          onMoveUp={() => moveSection(index, 'up')} onMoveDown={() => moveSection(index, 'down')} 
+          onDelete={() => updateState(p => ({...p, sections: p.sections.filter(s => s.id !== id)}))} 
           onAnimationChange={(v) => updateState(p => ({...p, sections: p.sections.map(s => s.id === id ? {...s, animation: v} : s)}))}
         >
            <div className="text-center mb-16">
@@ -623,7 +643,7 @@ export default function App() {
 
            <div className="flex flex-col lg:flex-row gap-16 items-center">
              <div className="w-full lg:w-1/3 flex justify-center">
-               <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-8 border-gray-50 shadow-inner">
+               <div className="w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden border-8 border-gray-50 shadow-inner bg-gray-100">
                   <InlineMedia 
                     isEditing={isEditing} src={sData.image} 
                     onUpload={(b64) => updateSectionData(id, 'image', b64)}
@@ -663,10 +683,10 @@ export default function App() {
                      
                      <div className="mt-6 flex gap-2 items-center">
                        {isEditing ? (
-                         <div className="w-full">
+                         <div className="w-full flex flex-col">
                            <label className="text-xs text-gray-400">Link CV (Google Drive)</label>
-                           <input type="text" className="w-full border p-2 text-xs rounded" value={sData.cvLink} onChange={(e) => updateSectionData(id, 'cvLink', e.target.value)} placeholder="https://drive.google.com/..." />
-                           <InlineText isEditing={isEditing} value={sData.btnText} onChange={(v) => updateSectionData(id, 'btnText', v)} className="bg-accent text-white px-4 py-2 rounded-full text-center mt-2 w-max" />
+                           <input type="text" className="w-full border p-2 text-xs rounded mb-2" value={sData.cvLink} onChange={(e) => updateSectionData(id, 'cvLink', e.target.value)} placeholder="https://drive.google.com/..." />
+                           <InlineText isEditing={isEditing} value={sData.btnText} onChange={(v) => updateSectionData(id, 'btnText', v)} className="bg-accent text-white px-4 py-2 rounded text-center w-full" />
                          </div>
                        ) : (
                          <a href={sData.cvLink} target="_blank" rel="noreferrer" className="bg-accent text-white px-8 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors font-bold text-sm">
@@ -710,7 +730,8 @@ export default function App() {
       return (
         <SectionWrapper 
           key={id} isEditing={isEditing} label={type} animation={animation}
-          onMoveUp={() => {}} onMoveDown={() => {}} onDelete={() => {}} 
+          onMoveUp={() => moveSection(index, 'up')} onMoveDown={() => moveSection(index, 'down')} 
+          onDelete={() => updateState(p => ({...p, sections: p.sections.filter(s => s.id !== id)}))} 
           onAnimationChange={(v) => updateState(p => ({...p, sections: p.sections.map(s => s.id === id ? {...s, animation: v} : s)}))}
         >
            {type === 'portfolio' && (
@@ -735,7 +756,14 @@ export default function App() {
                  </div>
                </div>
                <div className="w-full md:w-1/2">
-                 <InlineMedia isEditing={isEditing} src={sData.image} onUpload={(b64) => updateSectionData(id, 'image', b64)} containerClassName="rounded-xl overflow-hidden shadow-lg" className="w-full h-auto" />
+                 {/* MENGATASI CLS: aspect-video memastikan gambar tidak menciut saat dimuat */}
+                 <InlineMedia 
+                   isEditing={isEditing} 
+                   src={sData.image} 
+                   onUpload={(b64) => updateSectionData(id, 'image', b64)} 
+                   containerClassName="rounded-xl overflow-hidden shadow-lg aspect-video bg-gray-100 w-full" 
+                   className="w-full h-full object-cover" 
+                 />
                </div>
              </div>
            )}
@@ -744,7 +772,8 @@ export default function App() {
              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                {sData.items.map((item, idx) => (
                  <div key={item.id} className="group relative bg-white p-4 shadow-sm hover:shadow-xl transition-shadow border border-gray-100 rounded-xl">
-                    <InlineMedia isEditing={isEditing} src={item.image} onUpload={(b64) => updateSectionDeep(id, 'items', idx, 'image', b64)} containerClassName="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4" className="w-full h-full object-cover" />
+                    {/* ASPEK RASIO UNTUK PORTFOLIO ITEMS */}
+                    <InlineMedia isEditing={isEditing} src={item.image} onUpload={(b64) => updateSectionDeep(id, 'items', idx, 'image', b64)} containerClassName="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-4 w-full" className="w-full h-full object-cover" />
                     <h3 className="font-bold text-lg text-primary"><InlineText isEditing={isEditing} value={item.title} onChange={(v) => updateSectionDeep(id, 'items', idx, 'title', v)} tag="span" /></h3>
                     <p className="text-xs text-accent font-bold uppercase tracking-wider"><InlineText isEditing={isEditing} value={item.category} onChange={(v) => updateSectionDeep(id, 'items', idx, 'category', v)} tag="span" /></p>
                     {isEditing && <button onClick={() => {
@@ -756,16 +785,18 @@ export default function App() {
                {isEditing && <button onClick={() => {
                  const newItems = [...sData.items, { id: Date.now(), title: "New Work", category: "WEB", image: "" }];
                  updateSectionData(id, 'items', newItems);
-               }} className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl text-gray-400 hover:border-accent hover:text-accent p-8"><Plus size={32}/> Add Work</button>}
+               }} className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl text-gray-400 hover:border-accent hover:text-accent p-8 h-full min-h-[200px]"><Plus size={32}/> Add Work</button>}
              </div>
            )}
         </SectionWrapper>
       );
     }
+    
+    return null;
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-300 bg-[var(--color-bg)]">
+    <div className="min-h-screen transition-colors duration-300 bg-[var(--color-bg)] relative">
       <FontStyles fonts={data.theme.fonts} colors={data.theme} />
 
       {/* DRAGGABLE DECORATIONS */}
@@ -778,7 +809,7 @@ export default function App() {
       ))}
 
       {/* NAVBAR RESPONSIVE */}
-      <nav className="py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-sm z-40 border-b border-gray-50 shadow-sm">
+      <nav className="py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-sm z-50 border-b border-gray-50 shadow-sm">
         
         {/* LOGO */}
         <div className="w-10 h-10 bg-[var(--color-primary)] text-white flex items-center justify-center font-serif text-lg font-bold rounded shrink-0">
@@ -887,22 +918,22 @@ export default function App() {
       </nav>
 
       {/* MAIN CONTENT */}
-      <main className={`max-w-7xl mx-auto px-6 md:px-12 min-h-screen pb-20 pt-4 ${isAnimating ? 'opacity-0' : 'opacity-100 page-transition'}`}>
-         {data.sections.filter(s => s.page === activeTab).map(s => renderSection(s))}
+      <main className={`max-w-7xl mx-auto px-6 md:px-12 min-h-screen pb-20 pt-16 ${isAnimating ? 'opacity-0' : 'opacity-100 page-transition'}`}>
+         {data.sections.filter(s => s.page === activeTab).map((s, idx) => renderSection(s, idx))}
 
          {isEditing && (
-           <div className="mt-12 p-8 border-2 border-dashed border-gray-200 rounded-xl text-center">
+           <div className="mt-12 p-8 border-2 border-dashed border-gray-200 rounded-xl text-center hover:border-accent transition-colors">
               <p className="text-gray-400 text-xs font-bold uppercase mb-4">Add Section to {activeTab}</p>
               <button onClick={() => {
                 const newId = `generic-${Date.now()}`;
-                updateState(p => ({...p, sections: [...p.sections, { id: newId, type: 'generic', page: activeTab, animation: 'animate-fade-in', data: { title: "New", text: "Content", image: "" } }]}));
+                updateState(p => ({...p, sections: [...p.sections, { id: newId, type: 'generic', page: activeTab, animation: 'animate-fade-in', data: { title: "New Section", text: "Tulis deksripsi disini...", image: "" } }]}));
               }} className="bg-white border hover:border-accent text-gray-600 px-6 py-2 rounded-lg font-bold shadow-sm transition-all">+ Content Block</button>
            </div>
          )}
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-gray-50 py-12 text-center border-t border-gray-100">
+      <footer className="bg-gray-50 py-12 text-center border-t border-gray-100 relative z-20">
          <h2 className="font-serif text-2xl font-bold mb-2">
             <InlineText isEditing={isEditing} value={data.footer.tagline} onChange={(v) => updateState(p => ({...p, footer: {...p.footer, tagline: v}}))} tag="span" />
          </h2>
@@ -917,7 +948,7 @@ export default function App() {
 
       {/* ADMIN CONTROLS (Floating) */}
       {isEditing && (
-        <div className="fixed top-24 right-6 z-50 flex flex-col gap-3 animate-slide-in-right">
+        <div className="fixed top-24 right-6 z-[60] flex flex-col gap-3 animate-slide-in-right">
           <div className="bg-white p-4 rounded-xl shadow-2xl border w-64 max-h-[80vh] overflow-y-auto">
              <div className="flex justify-between border-b pb-2 mb-2">
                 <span className="text-xs font-bold text-gray-500 uppercase">Super Admin</span>
@@ -981,7 +1012,7 @@ export default function App() {
 
       {/* ADMIN TOGGLE */}
       {isAdmin && !isEditing && (
-        <button onClick={() => { setEditForm(content); setIsEditing(true); setShowAdminPanel(true); }} className="fixed bottom-6 right-6 z-50 bg-accent text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform flex items-center gap-2">
+        <button onClick={() => { setEditForm(content); setIsEditing(true); setShowAdminPanel(true); }} className="fixed bottom-6 right-6 z-[60] bg-accent text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform flex items-center gap-2">
           <Edit2 size={20} /> <span className="text-xs font-bold">EDIT</span>
         </button>
       )}
