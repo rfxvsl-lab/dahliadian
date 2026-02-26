@@ -410,6 +410,19 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
   const [isLoadingFromCloud, setIsLoadingFromCloud] = useState(true);
+  
+  // Mobile Menu State
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Mengunci scroll body saat menu mobile terbuka (Edge case handling)
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => { document.body.style.overflow = 'auto'; };
+  }, [isMenuOpen]);
 
   // Transition Logic
   const handlePageChange = (pageId) => {
@@ -755,9 +768,6 @@ export default function App() {
     <div className="min-h-screen transition-colors duration-300 bg-[var(--color-bg)]">
       <FontStyles fonts={data.theme.fonts} colors={data.theme} />
 
-      {/* LOADING STATE */}
-      {/* Removed - using simple password login now */}
-
       {/* DRAGGABLE DECORATIONS */}
       {data.decorations?.filter(d => d.page === activeTab).map(deco => (
         <DraggableShape 
@@ -767,50 +777,113 @@ export default function App() {
         />
       ))}
 
-      {/* NAVBAR */}
-      <nav className="py-6 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-sm z-40 border-b border-gray-50">
-        <div className="w-12 h-12 bg-primary text-white flex items-center justify-center font-serif text-xl font-bold rounded bg-[var(--color-primary)]">
-           {data.nav.useImageLogo ? (
-             <img src={data.nav.logoImage} alt="Logo" className="w-full h-full object-cover rounded" />
-           ) : (
-             <InlineText isEditing={isEditing} value={data.nav.logoText} onChange={(v) => updateState(p => ({...p, nav: {...p.nav, logoText: v}}))} tag="span" className="text-white" />
-           )}
-        </div>
+      {/* NAVBAR RESPONSIVE */}
+      <nav className="py-4 px-6 md:px-12 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur-sm z-40 border-b border-gray-50 shadow-sm">
         
-        {/* Social Icons (Editable) */}
-        <div className="hidden md:flex gap-4 text-gray-400">
-           {data.socials.map((soc) => (
-             <div key={soc.id} className="relative group">
-               <a href={soc.url} target="_blank" className="hover:text-[var(--color-accent)] transition-colors">{renderSocialIcon(soc.type)}</a>
-               {isEditing && (
-                 <div className="absolute top-6 left-0 bg-white shadow-xl p-2 border z-50 w-48 rounded text-xs">
-                   <select value={soc.type} onChange={(e) => updateState(p => ({...p, socials: p.socials.map(s => s.id === soc.id ? {...s, type: e.target.value} : s)}))} className="w-full mb-1 border rounded">
-                     {['facebook','twitter','instagram','linkedin','email','whatsapp'].map(t => <option key={t} value={t}>{t}</option>)}
-                   </select>
-                   <input type="text" value={soc.url} onChange={(e) => updateState(p => ({...p, socials: p.socials.map(s => s.id === soc.id ? {...s, url: e.target.value} : s)}))} className="w-full border rounded p-1 mb-1" />
-                   <button onClick={() => updateState(p => ({...p, socials: p.socials.filter(s => s.id !== soc.id)}))} className="text-red-500 text-[10px] w-full text-left">Hapus</button>
-                 </div>
-               )}
-             </div>
-           ))}
-           {isEditing && <button onClick={() => updateState(p => ({...p, socials: [...p.socials, {id: Date.now(), type: 'facebook', url: '#'}]}))} className="bg-gray-100 rounded-full p-1"><Plus size={14}/></button>}
+        {/* LOGO */}
+        <div className="w-10 h-10 bg-[var(--color-primary)] text-white flex items-center justify-center font-serif text-lg font-bold rounded shrink-0">
+          {data.nav.useImageLogo ? (
+            <img src={data.nav.logoImage} alt="Logo" className="w-full h-full object-cover rounded" />
+          ) : (
+            <InlineText isEditing={isEditing} value={data.nav.logoText} onChange={(v) => updateState(p => ({...p, nav: {...p.nav, logoText: v}}))} tag="span" className="text-white" />
+          )}
         </div>
 
-        {/* Menu */}
-        <div className="flex gap-8 items-center">
-           {data.nav.menu.map(item => (
-             <button 
-               key={item.id} 
-               onClick={() => !isEditing && handlePageChange(item.id)}
-               className={`text-xs font-bold uppercase tracking-widest hover:text-[var(--color-accent)] transition-colors ${activeTab === item.id ? 'text-[var(--color-accent)]' : 'text-gray-500'}`}
-             >
-               <InlineText isEditing={isEditing} value={item.text} onChange={(v) => {
-                 const newMenu = data.nav.menu.map(m => m.id === item.id ? {...m, text: v} : m);
-                 updateState(p => ({...p, nav: {...p.nav, menu: newMenu}}));
-               }} tag="span" />
-             </button>
-           ))}
+        {/* DESKTOP MENU & SOCIALS */}
+        <div className="hidden md:flex items-center gap-8">
+          <div className="flex gap-6">
+            {data.nav.menu.map(item => (
+              <button 
+                key={item.id} 
+                onClick={() => !isEditing && handlePageChange(item.id)}
+                className={`text-[10px] font-bold uppercase tracking-widest hover:text-[var(--color-accent)] transition-colors ${activeTab === item.id ? 'text-[var(--color-accent)]' : 'text-gray-500'}`}
+              >
+                <InlineText isEditing={isEditing} value={item.text} onChange={(v) => {
+                  const newMenu = data.nav.menu.map(m => m.id === item.id ? {...m, text: v} : m);
+                  updateState(p => ({...p, nav: {...p.nav, menu: newMenu}}));
+                }} tag="span" />
+              </button>
+            ))}
+          </div>
+          
+          <div className="w-px h-4 bg-gray-200"></div>
+
+          <div className="flex gap-4 text-gray-400">
+            {data.socials.map((soc) => (
+              <div key={soc.id} className="relative group">
+                 <a href={soc.url} target="_blank" rel="noreferrer" className="hover:text-[var(--color-accent)] transition-colors">
+                   {renderSocialIcon(soc.type, 16)}
+                 </a>
+                 {isEditing && (
+                   <div className="absolute top-6 left-0 bg-white shadow-xl p-2 border z-50 w-48 rounded text-xs">
+                     <select value={soc.type} onChange={(e) => updateState(p => ({...p, socials: p.socials.map(s => s.id === soc.id ? {...s, type: e.target.value} : s)}))} className="w-full mb-1 border rounded">
+                       {['facebook','twitter','instagram','linkedin','email','whatsapp'].map(t => <option key={t} value={t}>{t}</option>)}
+                     </select>
+                     <input type="text" value={soc.url} onChange={(e) => updateState(p => ({...p, socials: p.socials.map(s => s.id === soc.id ? {...s, url: e.target.value} : s)}))} className="w-full border rounded p-1 mb-1" />
+                     <button onClick={() => updateState(p => ({...p, socials: p.socials.filter(s => s.id !== soc.id)}))} className="text-red-500 text-[10px] w-full text-left">Hapus</button>
+                   </div>
+                 )}
+              </div>
+            ))}
+            {isEditing && <button onClick={() => updateState(p => ({...p, socials: [...p.socials, {id: Date.now(), type: 'facebook', url: '#'}]}))} className="bg-gray-100 rounded-full p-1"><Plus size={14}/></button>}
+          </div>
         </div>
+
+        {/* MOBILE HAMBURGER BUTTON */}
+        <div className="md:hidden flex items-center gap-4">
+          <button 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Toggle Menu"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* MOBILE MENU OVERLAY */}
+        {isMenuOpen && (
+          <div className="absolute top-full left-0 w-full bg-white border-b border-gray-100 shadow-xl p-6 flex flex-col gap-6 md:hidden animate-fade-in z-50">
+            {data.nav.menu.map(item => (
+              <button 
+                key={item.id} 
+                onClick={() => {
+                  if(!isEditing) {
+                    handlePageChange(item.id);
+                    setIsMenuOpen(false);
+                  }
+                }}
+                className={`text-sm font-bold uppercase tracking-widest text-left ${activeTab === item.id ? 'text-[var(--color-accent)]' : 'text-gray-600'}`}
+              >
+                <InlineText isEditing={isEditing} value={item.text} onChange={(v) => {
+                  const newMenu = data.nav.menu.map(m => m.id === item.id ? {...m, text: v} : m);
+                  updateState(p => ({...p, nav: {...p.nav, menu: newMenu}}));
+                }} tag="span" />
+              </button>
+            ))}
+            
+            <div className="h-px bg-gray-100 w-full"></div>
+            
+            <div className="flex gap-6 justify-center flex-wrap">
+              {data.socials.map((soc) => (
+                <div key={soc.id} className="relative group">
+                  <a href={soc.url} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[var(--color-accent)] transition-colors">
+                    {renderSocialIcon(soc.type, 20)}
+                  </a>
+                  {isEditing && (
+                     <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-white shadow-xl p-2 border z-50 w-48 rounded text-xs">
+                       <select value={soc.type} onChange={(e) => updateState(p => ({...p, socials: p.socials.map(s => s.id === soc.id ? {...s, type: e.target.value} : s)}))} className="w-full mb-1 border rounded">
+                         {['facebook','twitter','instagram','linkedin','email','whatsapp'].map(t => <option key={t} value={t}>{t}</option>)}
+                       </select>
+                       <input type="text" value={soc.url} onChange={(e) => updateState(p => ({...p, socials: p.socials.map(s => s.id === soc.id ? {...s, url: e.target.value} : s)}))} className="w-full border rounded p-1 mb-1" />
+                       <button onClick={() => updateState(p => ({...p, socials: p.socials.filter(s => s.id !== soc.id)}))} className="text-red-500 text-[10px] w-full text-left">Hapus</button>
+                     </div>
+                  )}
+                </div>
+              ))}
+              {isEditing && <button onClick={() => updateState(p => ({...p, socials: [...p.socials, {id: Date.now(), type: 'facebook', url: '#'}]}))} className="bg-gray-100 rounded-full p-1"><Plus size={14}/></button>}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* MAIN CONTENT */}
@@ -898,8 +971,7 @@ export default function App() {
         </div>
       )}
 
-      {/* AUTH MODAL */}
-      {/* Removed - using simple password modal instead */}
+      {/* SAVE SUCCESS TOAST */}
       {showSaveModal && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full shadow-2xl z-[100] flex items-center gap-2 animate-bounce">
           <CheckCircle size={20} />
